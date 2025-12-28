@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON 转 YAML 转换器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1400px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+
+        .converter-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .input-section, .output-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 400px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 16px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .convert-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .convert-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .convert-btn:active {
+            transform: translateY(0);
+        }
+
+        .clear-btn {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .clear-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .copy-btn {
+            background: #4caf50;
+            color: white;
+        }
+
+        .copy-btn:hover {
+            background: #45a049;
+        }
+
+        .paste-btn {
+            background: #2196f3;
+            color: white;
+        }
+
+        .paste-btn:hover {
+            background: #0b7dda;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            border-left: 4px solid #c62828;
+        }
+
+        .success-message {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            border-left: 4px solid #2e7d32;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        @media (max-width: 968px) {
+            .converter-wrapper {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 JSON 转 YAML 转换器</h1>
+        <p class="subtitle">快速、准确地将 JSON 格式转换为 YAML 格式</p>
+
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+
+        <div class="button-group">
+            <button class="convert-btn" onclick="convertJsonToYaml()">转换 ➜</button>
+            <button class="clear-btn" onclick="clearAll()">清空 ✕</button>
+            <button class="paste-btn" onclick="pasteJson()">粘贴 JSON 📋</button>
+            <button class="copy-btn" onclick="copyYaml()">复制 YAML 📋</button>
+        </div>
+
+        <div class="converter-wrapper">
+            <div class="input-section">
+                <label for="jsonInput">📥 JSON 输入</label>
+                <textarea id="jsonInput" placeholder="在此粘贴您的 JSON 数据..."></textarea>
+            </div>
+
+            <div class="output-section">
+                <label for="yamlOutput">📤 YAML 输出</label>
+                <textarea id="yamlOutput" placeholder="转换后的 YAML 将显示在这里..." readonly></textarea>
+            </div>
+        </div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-item">
+                <div class="stat-label">JSON 行数</div>
+                <div class="stat-value" id="jsonLines">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">YAML 行数</div>
+                <div class="stat-value" id="yamlLines">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">转换时间</div>
+                <div class="stat-value" id="convertTime">0ms</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // JSON to YAML conversion function
+        function jsonToYaml(json, indent = 0) {
+            const spaces = '  '.repeat(indent);
+
+            if (json === null) {
+                return 'null';
+            }
+
+            if (typeof json === 'boolean') {
+                return json ? 'true' : 'false';
+            }
+
+            if (typeof json === 'number') {
+                return json.toString();
+            }
+
+            if (typeof json === 'string') {
+                // Check if string needs quotes
+                if (json.includes(':') || json.includes('{') || json.includes('}') ||
+                    json.includes('[') || json.includes(']') || json.includes('&') ||
+                    json.includes('*') || json.includes('!') || json.includes('|') ||
+                    json.includes('>') || json.includes("'") || json.startsWith(' ') ||
+                    json.endsWith(' ')) {
+                    return JSON.stringify(json);
+                }
+                return json;
+            }
+
+            if (Array.isArray(json)) {
+                if (json.length === 0) {
+                    return '[]';
+                }
+
+                let yaml = '';
+                for (const item of json) {
+                    if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+                        yaml += `${spaces}- \n${spaces}  ${jsonToYaml(item, indent + 1).replace(/\n/g, `\n${spaces}  `)}\n`;
+                    } else {
+                        yaml += `${spaces}- ${jsonToYaml(item, indent)}\n`;
+                    }
+                }
+                return yaml.trim();
+            }
+
+            if (typeof json === 'object') {
+                let yaml = '';
+                const keys = Object.keys(json);
+
+                if (keys.length === 0) {
+                    return '{}';
+                }
+
+                for (const key of keys) {
+                    const value = json[key];
+                    const yamlValue = jsonToYaml(value, indent + 1);
+
+                    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                        yaml += `${spaces}${key}:\n${spaces}  ${yamlValue.replace(/\n/g, `\n${spaces}  `)}\n`;
+                    } else if (Array.isArray(value)) {
+                        yaml += `${spaces}${key}:\n${jsonToYaml(value, indent + 1).replace(/\n/g, `\n${spaces}  `)}\n`;
+                    } else {
+                        yaml += `${spaces}${key}: ${yamlValue}\n`;
+                    }
+                }
+                return yaml.trim();
+            }
+
+            return JSON.stringify(json);
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('successMessage').style.display = 'none';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        // Convert JSON to YAML
+        function convertJsonToYaml() {
+            const jsonInput = document.getElementById('jsonInput').value.trim();
+
+            if (!jsonInput) {
+                showError('请输入要转换的 JSON 数据');
+                return;
+            }
+
+            const startTime = performance.now();
+
+            try {
+                const jsonObj = JSON.parse(jsonInput);
+                const yaml = jsonToYaml(jsonObj);
+                const endTime = performance.now();
+
+                document.getElementById('yamlOutput').value = yaml;
+
+                // Update stats
+                const jsonLines = jsonInput.split('\n').length;
+                const yamlLines = yaml.split('\n').length;
+                const convertTime = Math.round(endTime - startTime);
+
+                document.getElementById('jsonLines').textContent = jsonLines;
+                document.getElementById('yamlLines').textContent = yamlLines;
+                document.getElementById('convertTime').textContent = convertTime + 'ms';
+                document.getElementById('stats').style.display = 'flex';
+
+                showSuccess('转换成功！');
+            } catch (error) {
+                showError('JSON 格式错误: ' + error.message);
+            }
+        }
+
+        // Clear all fields
+        function clearAll() {
+            document.getElementById('jsonInput').value = '';
+            document.getElementById('yamlOutput').value = '';
+            document.getElementById('stats').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        // Copy YAML output
+        async function copyYaml() {
+            const yamlOutput = document.getElementById('yamlOutput').value;
+
+            if (!yamlOutput) {
+                showError('没有可复制的内容');
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(yamlOutput);
+                showSuccess('YAML 已复制到剪贴板！');
+            } catch (error) {
+                showError('复制失败，请手动选择文本复制');
+            }
+        }
+
+        // Paste JSON from clipboard
+        async function pasteJson() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('jsonInput').value = text;
+                showSuccess('JSON 已从剪贴板粘贴！');
+            } catch (error) {
+                showError('粘贴失败，请手动粘贴');
+            }
+        }
+
+        // Auto-convert on Ctrl+Enter
+        document.getElementById('jsonInput').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                convertJsonToYaml();
+            }
+        });
+
+        // Auto-resize textarea
+        document.querySelectorAll('textarea').forEach(textarea => {
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = this.scrollHeight + 'px';
+            });
+        });
+    </script>
+</body>
+</html>
